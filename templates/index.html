@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Person Counter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Person Counter</h1>
+        
+        <div class="model-selection">
+            <label>
+                <input type="radio" name="model" value="sam" checked>
+                SAM + Mask R-CNN
+            </label>
+            <label>
+                <input type="radio" name="model" value="maskrcnn">
+                Mask R-CNN Only
+            </label>
+        </div>
+
+        <div class="upload-section">
+            <form id="uploadForm">
+                <input type="file" id="imageInput" accept="image/*">
+                <button type="submit">Count People</button>
+            </form>
+        </div>
+
+        <div class="progress" style="display:none;">
+            <div class="status">Initializing...</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="results" style="display:none;">
+            <div class="count"></div>
+            <div class="visualization">
+                <img id="resultImage">
+            </div>
+        </div>
+
+        <div class="error" style="display:none;"></div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            try {
+                const formData = new FormData();
+                const imageFile = document.getElementById('imageInput').files[0];
+                if (!imageFile) {
+                    alert('Please select an image');
+                    return;
+                }
+                
+                formData.append('image', imageFile);
+                formData.append('use_sam', document.querySelector('input[name="model"]:checked').value === 'sam');
+                
+                const response = await fetch('http://127.0.0.1:5000/count', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.querySelector('.count').textContent = 
+                    `Detected ${data.count} people`;
+                document.getElementById('resultImage').src = 
+                    `data:image/png;base64,${data.visualization}`;
+                    
+                document.querySelector('.results').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing image: ' + error.message);
+            }
+        };
+        </script>
+</body>
+</html>
